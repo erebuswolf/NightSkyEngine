@@ -385,7 +385,7 @@ void ANightSkyGameState::UpdateGameState(int32 Input1, int32 Input2, bool bShoul
 			{
 				GetMainPlayer(true)->JumpToState(State_Universal_Stand);
 			}
-			if (GetMainPlayer(true)->GetCurrentStateName() != GetMainPlayer(true)->IntroName)
+			if (GetMainPlayer(true)->GetCurrentStateName(StateMachine_Primary) != GetMainPlayer(true)->IntroName)
 			{
 				GetMainPlayer(false)->JumpToState(GetMainPlayer(false)->IntroName);
 				BattleState.CurrentIntroSide = INT_P2;
@@ -397,7 +397,7 @@ void ANightSkyGameState::UpdateGameState(int32 Input1, int32 Input2, bool bShoul
 			{
 				GetMainPlayer(false)->JumpToState(State_Universal_Stand);
 			}
-			if (GetMainPlayer(false)->GetCurrentStateName() != GetMainPlayer(false)->IntroName)
+			if (GetMainPlayer(false)->GetCurrentStateName(StateMachine_Primary) != GetMainPlayer(false)->IntroName)
 			{
 				GetMainPlayer(true)->JumpToState(State_Universal_Stand);
 				GetMainPlayer(false)->JumpToState(State_Universal_Stand);
@@ -478,7 +478,13 @@ void ANightSkyGameState::UpdateGameState(int32 Input1, int32 Input2, bool bShoul
 					SortedObjects[i]->Player->HandleBufferedState();
 				SortedObjects[i]->GetBoxes();
 				SortedObjects[i]->Player->StoredInputBuffer.Update(SortedObjects[i]->Player->Inputs);
-				SortedObjects[i]->Player->HandleStateMachine(true); //handle state transitions
+
+				// Handle state transitions
+				SortedObjects[i]->Player->HandleStateMachine(true, SortedObjects[i]->Player->GetStateMachine(StateMachine_Primary));
+				for (auto& StateMachine : SortedObjects[i]->Player->SubStateMachines)
+				{
+					SortedObjects[i]->Player->HandleStateMachine(true, StateMachine);
+				}
 			}
 			continue;
 		}
@@ -487,13 +493,13 @@ void ANightSkyGameState::UpdateGameState(int32 Input1, int32 Input2, bool bShoul
 
 	if (BattleState.SuperFreezeSelfDuration == 1)
 	{
-		BattleState.SuperFreezeCaller->TriggerEvent(EVT_SuperFreezeEnd);
+		BattleState.SuperFreezeCaller->TriggerEvent(EVT_SuperFreezeEnd, StateMachine_Primary);
 	}
 	if (BattleState.SuperFreezeDuration == 1)
 	{
 		for (int i = 0; i < SortedObjects.Num(); i++)
 		{
-			SortedObjects[i]->TriggerEvent(EVT_SuperFreezeEnd);
+			SortedObjects[i]->TriggerEvent(EVT_SuperFreezeEnd, StateMachine_Primary);
 		}
 
 		BattleState.PauseTimer = false;
@@ -804,8 +810,9 @@ void ANightSkyGameState::HandleHitCollision() const
 		{
 			if (j == BattleState.ActiveObjectCount)
 				break;
-			if (SortedObjects[i]->Player->PlayerIndex != SortedObjects[j]->Player->PlayerIndex && SortedObjects[j]->
-				Player->PlayerFlags & PLF_IsOnScreen)
+			if (SortedObjects[i]->Player->PlayerIndex != SortedObjects[j]->Player->PlayerIndex 
+				&& SortedObjects[i]->Player->PlayerFlags & PLF_IsOnScreen
+				&& SortedObjects[j]->Player->PlayerFlags & PLF_IsOnScreen)
 			{
 				SortedObjects[i]->HandleCustomCollision_PreHit(SortedObjects[j]);
 				SortedObjects[i]->HandleClashCollision(SortedObjects[j]);
@@ -1877,7 +1884,7 @@ void ANightSkyGameState::SaveGameState(int32* InChecksum)
 		Players[i]->SaveForRollback(RollbackData[BackupFrame].ObjBuffer[i + MaxBattleObjects].GetData());
 		if (Players[i]->PlayerFlags & PLF_IsOnScreen)
 		{
-			RollbackData[BackupFrame].StateData.Add(Players[i]->StoredStateMachine.CurrentState->SaveForRollback());
+			RollbackData[BackupFrame].StateData.Add(Players[i]->PrimaryStateMachine.CurrentState->SaveForRollback());
 		}
 		else
 		{
@@ -1923,7 +1930,7 @@ void ANightSkyGameState::LoadGameState()
 		Players[i]->LoadForRollback(RollbackData[CurrentRollbackFrame].ObjBuffer[i + MaxBattleObjects].GetData());
 		if (Players[i]->PlayerFlags & PLF_IsOnScreen)
 		{
-			Players[i]->StoredStateMachine.CurrentState->LoadForRollback(
+			Players[i]->PrimaryStateMachine.CurrentState->LoadForRollback(
 				RollbackData[CurrentRollbackFrame].StateData[i + MaxBattleObjects]);
 		}
 		Players[i]->LoadForRollbackPlayer(RollbackData[CurrentRollbackFrame].CharBuffer[i].GetData());
