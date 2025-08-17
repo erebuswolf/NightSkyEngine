@@ -4,6 +4,8 @@
 #include "SubroutineState.h"
 #include "Actors/PlayerObject.h"
 
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(StateMachine_Primary, "StateMachine.Primary", "Primary State Machine");
+
 void FStateMachine::AddState(const FGameplayTag& Name, UState* Config)
 {
 	Config->Parent = Parent;
@@ -59,11 +61,11 @@ bool FStateMachine::SetState(const FGameplayTag Name, bool bIsAlias)
 		return SetState(Alias->StateToEnter, true);
 	}
 	
-	Parent->TriggerEvent(EVT_Exit);
-	Parent->OnStateChange();	
+	Parent->TriggerEvent(EVT_Exit, StateMachineName);
+	if (bPrimary) Parent->OnStateChange();
 
 	CurrentState = StateToEnter;
-	Parent->PostStateChange();
+	if (bPrimary) Parent->PostStateChange();
 	CurrentState->Init();
 	Update();
 
@@ -92,11 +94,11 @@ bool FStateMachine::ForceSetState(const FGameplayTag Name, bool bIsAlias)
 		return ForceSetState(Alias->StateToEnter, true);
 	}
 
-	Parent->TriggerEvent(EVT_Exit);
-	Parent->OnStateChange();	
+	Parent->TriggerEvent(EVT_Exit, StateMachineName);
+	if (bPrimary) Parent->OnStateChange();
 
 	CurrentState = StateToEnter;
-	Parent->PostStateChange();
+	if (bPrimary) Parent->PostStateChange();
 	CurrentState->Init();
 	Update();
 
@@ -123,11 +125,11 @@ bool FStateMachine::ForceSetState(TSubclassOf<UState> Class, bool bIsAlias)
 				return ForceSetState(Alias->StateToEnter, true);
 			}
 
-			Parent->TriggerEvent(EVT_Exit);
-			Parent->OnStateChange();	
+			Parent->TriggerEvent(EVT_Exit, StateMachineName);
+			if (bPrimary) Parent->OnStateChange();
 
 			CurrentState = State;
-			Parent->PostStateChange();
+			if (bPrimary) Parent->PostStateChange();
 			CurrentState->Init();
 			Update();
 

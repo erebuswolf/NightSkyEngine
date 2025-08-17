@@ -488,10 +488,10 @@ void ABattleObject::HandleHitCollision(ABattleObject* AttackedObj)
 			AttackFlags |= ATK_HasHit;
 			AttackTarget = AttackedPlayer;
 
-			TriggerEvent(EVT_HitOrBlock);
+			TriggerEvent(EVT_HitOrBlock, StateMachine_Primary);
 			if (AttackedPlayer->IsMainPlayer())
 			{
-				TriggerEvent(EVT_HitOrBlockMainPlayer);
+				TriggerEvent(EVT_HitOrBlockMainPlayer, StateMachine_Primary);
 			}
 
 			AttackedPlayer->CallSubroutine(Subroutine_HitCollision);
@@ -502,10 +502,10 @@ void ABattleObject::HandleHitCollision(ABattleObject* AttackedObj)
 				CreateCommonParticle(Particle_Guard, POS_Enemy,
 				                     FVector(0, 100, 0),
 				                     FRotator(HitCommon.HitAngle, 0, 0));
-				TriggerEvent(EVT_Block);
+				TriggerEvent(EVT_Block, StateMachine_Primary);
 				if (AttackedPlayer->IsMainPlayer())
 				{
-					TriggerEvent(EVT_BlockMainPlayer);
+					TriggerEvent(EVT_BlockMainPlayer, StateMachine_Primary);
 				}
 
 				const int32 ChipDamage = NormalHit.Damage * HitCommon.ChipDamagePercent / 100;
@@ -543,10 +543,10 @@ void ABattleObject::HandleHitCollision(ABattleObject* AttackedObj)
 			}
 			else if (AttackedPlayer->SuperArmorSuccess(this))
 			{
-				TriggerEvent(EVT_Hit);
+				TriggerEvent(EVT_Hit, StateMachine_Primary);
 				if (AttackedPlayer->IsMainPlayer())
 				{
-					TriggerEvent(EVT_HitMainPlayer);
+					TriggerEvent(EVT_HitMainPlayer, StateMachine_Primary);
 				}
 
 				if (AttackedPlayer->SuperArmorData.ArmorHits > 0)
@@ -616,10 +616,10 @@ void ABattleObject::HandleHitCollision(ABattleObject* AttackedObj)
 			}
 			else if ((AttackedPlayer->AttackFlags & ATK_IsAttacking) == 0)
 			{
-				TriggerEvent(EVT_Hit);
+				TriggerEvent(EVT_Hit, StateMachine_Primary);
 				if (AttackedPlayer->IsMainPlayer())
 				{
-					TriggerEvent(EVT_HitMainPlayer);
+					TriggerEvent(EVT_HitMainPlayer, StateMachine_Primary);
 				}
 
 				if (IsPlayer && Player->PlayerFlags & PLF_HitgrabActive)
@@ -650,12 +650,12 @@ void ABattleObject::HandleHitCollision(ABattleObject* AttackedObj)
 			}
 			else
 			{
-				TriggerEvent(EVT_Hit);
-				TriggerEvent(EVT_CounterHit);
+				TriggerEvent(EVT_Hit, StateMachine_Primary);
+				TriggerEvent(EVT_CounterHit, StateMachine_Primary);
 				if (AttackedPlayer->IsMainPlayer())
 				{
-					TriggerEvent(EVT_HitMainPlayer);
-					TriggerEvent(EVT_CounterHitMainPlayer);
+					TriggerEvent(EVT_HitMainPlayer, StateMachine_Primary);
+					TriggerEvent(EVT_CounterHitMainPlayer, StateMachine_Primary);
 				}
 
 				AttackedPlayer->AddColor = FLinearColor(5, 0.2, 0.2, 1);
@@ -1181,7 +1181,6 @@ void ABattleObject::HandleClashCollision(ABattleObject* OtherObj)
 	{
 		if (CheckBoxOverlap(OtherObj, BOX_Hit, FGameplayTag::EmptyTag, BOX_Hit, FGameplayTag::EmptyTag))
 		{
-		
 			if (IsPlayer && OtherObj->IsPlayer)
 			{
 				Hitstop = 16;
@@ -1192,13 +1191,13 @@ void ABattleObject::HandleClashCollision(ABattleObject* OtherObj)
 				OtherObj->HitPosY = HitPosY;
 				Player->EnableAttacks();
 				Player->EnableCancelIntoSelf(true);
-				Player->EnableState(ENB_ForwardDash);
+				Player->EnableState(ENB_ForwardDash, StateMachine_Primary);
 				OtherObj->Player->EnableAttacks();
 				OtherObj->Player->EnableCancelIntoSelf(true);
-				OtherObj->Player->EnableState(ENB_ForwardDash);
-				TriggerEvent(EVT_HitOrBlock);
-				OtherObj->TriggerEvent(EVT_HitOrBlock);
-				CreateCommonParticle(Particle_Hit_Clash, POS_Hit, FVector(0, 100, 0));
+				OtherObj->Player->EnableState(ENB_ForwardDash, StateMachine_Primary);
+				TriggerEvent(EVT_HitOrBlock, StateMachine_Primary);
+				OtherObj->TriggerEvent(EVT_HitOrBlock, StateMachine_Primary);
+				CreateCommonParticle(Particle_Hit_Clash, POS_Hit, FVector(0, 0, 0));
 				PlayCommonSound(Sound_Hit_Clash);
 			}
 			else if (!IsPlayer && !OtherObj->IsPlayer)
@@ -1209,9 +1208,9 @@ void ABattleObject::HandleClashCollision(ABattleObject* OtherObj)
 				OtherObj->AttackFlags &= ~ATK_HitActive;
 				OtherObj->HitPosX = HitPosX;
 				OtherObj->HitPosY = HitPosY;
-				TriggerEvent(EVT_HitOrBlock);
-				OtherObj->TriggerEvent(EVT_HitOrBlock);
-				CreateCommonParticle(Particle_Hit_Clash, POS_Hit, FVector(0, 100, 0));
+				TriggerEvent(EVT_HitOrBlock, StateMachine_Primary);
+				OtherObj->TriggerEvent(EVT_HitOrBlock, StateMachine_Primary);
+				CreateCommonParticle(Particle_Hit_Clash, POS_Hit, FVector(0, 0, 0));
 				PlayCommonSound(Sound_Hit_Clash);
 			}	
 		}
@@ -1240,11 +1239,11 @@ void ABattleObject::HandleFlip()
 		if (IsPlayer)
 		{
 			Player->StoredInputBuffer.FlipInputsInBuffer();
-			if (Player->Stance == ACT_Standing && Player->EnableFlags & ENB_Standing)
+			if (Player->Stance == ACT_Standing && Player->GetEnableFlags(StateMachine_Primary) & ENB_Standing)
 				Player->JumpToState(State_Universal_StandFlip);
-			else if (Player->Stance == ACT_Crouching && Player->EnableFlags & ENB_Standing)
+			else if (Player->Stance == ACT_Crouching && Player->GetEnableFlags(StateMachine_Primary) & ENB_Standing)
 				Player->JumpToState(State_Universal_CrouchFlip);
-			else if (Player->Stance == ACT_Jumping && Player->EnableFlags & ENB_Jumping)
+			else if (Player->Stance == ACT_Jumping && Player->GetEnableFlags(StateMachine_Primary) & ENB_Jumping)
 				Player->JumpToState(State_Universal_JumpFlip);
 		}
 	}
@@ -1298,7 +1297,7 @@ void ABattleObject::PosTypeToPosition(EPosType Type, int32* OutPosX, int32* OutP
 	}
 }
 
-void ABattleObject::TriggerEvent(EEventType EventType)
+void ABattleObject::TriggerEvent(EEventType EventType, FGameplayTag StateMachineName)
 {
 	if (EventType == EVT_Update) UpdateTime++;
 	if (const auto SubroutineName = EventHandlers[EventType].SubroutineName; SubroutineName != FGameplayTag::EmptyTag)
@@ -1324,7 +1323,7 @@ void ABattleObject::TriggerEvent(EEventType EventType)
 
 	UState* State = ObjectState;
 	if (IsPlayer)
-		State = Player->StoredStateMachine.CurrentState;
+		State = Player->GetStateMachine(StateMachineName).CurrentState;
 	if (!IsValid(State))
 		return;
 	UFunction* const Func = State->FindFunction(EventHandlers[EventType].FunctionName);
@@ -1660,7 +1659,7 @@ void ABattleObject::FuncCall(const FName& FuncName) const
 {
 	UState* CurrentState = ObjectState;
 	if (IsPlayer)
-		CurrentState = Player->StoredStateMachine.CurrentState;
+		CurrentState = Player->PrimaryStateMachine.CurrentState;
 
 	UFunction* const Func = CurrentState->FindFunction(FuncName);
 	if (IsValid(Func) && Func->ParmsSize == 0)
@@ -1780,12 +1779,12 @@ void ABattleObject::Update()
 	if (Timer0 > 0)
 	{
 		--Timer0;
-		if (Timer0 == 0) TriggerEvent(EVT_Timer0);
+		if (Timer0 == 0) TriggerEvent(EVT_Timer0, StateMachine_Primary);
 	}
 	if (Timer1 > 0)
 	{
 		--Timer1;
-		if (Timer1 == 0) TriggerEvent(EVT_Timer1);
+		if (Timer1 == 0) TriggerEvent(EVT_Timer1, StateMachine_Primary);
 	}
 
 	if (MiscFlags & MISC_FlipEnable)
@@ -1798,7 +1797,7 @@ void ABattleObject::Update()
 	if (PosY == GroundHeight && PrevPosY != GroundHeight)
 	{
 		if (!IsPlayer)
-			TriggerEvent(EVT_Landing);
+			TriggerEvent(EVT_Landing, StateMachine_Primary);
 		SpeedX = 0;
 	}
 
@@ -1810,7 +1809,7 @@ void ABattleObject::Update()
 		}
 
 		ObjectState->CallExec();
-		TriggerEvent(EVT_Update);
+		TriggerEvent(EVT_Update, StateMachine_Primary);
 		TimeUntilNextCel--;
 		if (TimeUntilNextCel == 0)
 			CelIndex++;
@@ -2083,14 +2082,11 @@ void ABattleObject::SetBlendCelName(FGameplayTag InName)
 	GetBoxes();
 }
 
-void ABattleObject::GotoLabel(FGameplayTag InName, bool ResetState)
+void ABattleObject::GotoLabel(FGameplayTag InName)
 {
 	if (!GameState && !CharaSelectGameState) return;
 	LabelName = InName;
-	if (IsPlayer && ResetState)
-		Player->JumpToState(Player->GetCurrentStateName(), true);
-	else
-		GotoLabelActive = true;
+	GotoLabelActive = true;
 }
 
 void ABattleObject::SetTimeUntilNextCel(int32 InTime)
@@ -2723,7 +2719,7 @@ void ABattleObject::StartSuperFreeze(int Duration, int SelfDuration)
 {
 	if (!GameState) return;
 	GameState->StartSuperFreeze(Duration, SelfDuration, this);
-	if (Duration > 0) TriggerEvent(EVT_SuperFreeze);
+	if (Duration > 0) TriggerEvent(EVT_SuperFreeze, StateMachine_Primary);
 }
 
 void ABattleObject::IgnoreSuperFreeze(bool Ignore)
