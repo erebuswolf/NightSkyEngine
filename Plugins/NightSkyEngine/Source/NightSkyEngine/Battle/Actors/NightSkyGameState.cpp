@@ -189,21 +189,21 @@ void ANightSkyGameState::RoundInit()
 	BattleState.BattlePhase = EBattlePhase::Battle;
 	BattleState.FadeTimer = BattleState.MaxFadeTimer;
 
-	if (BattleState.BattleFormat != EBattleFormat::Tag || BattleState.RoundCount == 1)
+	if (BattleState.BattleFormat == EBattleFormat::Rounds || BattleState.RoundCount == 1)
 	{
 		if (!GameInstance->IsTraining)
 			BattleState.TimeUntilRoundStart = BattleState.MaxTimeUntilRoundStart;
 		for (int i = 0; i < MaxBattleObjects; i++)
 			Objects[i]->ResetObject();
 
+		for (const auto Player : Players)
+			Player->RoundInit(true);
+
 		if (BattleState.RoundCount != 1)
 		{
 			GetMainPlayer(true)->JumpToState(State_Universal_Stand);
 			GetMainPlayer(false)->JumpToState(State_Universal_Stand);
 		}
-
-		for (const auto Player : Players)
-			Player->RoundInit(true);
 
 		Players[0]->PlayerFlags = PLF_IsOnScreen;
 		Players[BattleState.TeamData[0].TeamCount]->PlayerFlags = PLF_IsOnScreen;
@@ -245,25 +245,22 @@ void ANightSkyGameState::RoundInit()
 		GetMainPlayer(IsP1)->SetOnScreen(false);
 		SwitchMainPlayer(GetMainPlayer(IsP1), 1);
 
-		if (BattleState.RoundCount != 1)
-		{
-			GetMainPlayer(true)->JumpToState(State_Universal_Stand);
-			GetMainPlayer(false)->JumpToState(State_Universal_Stand);
-		}
-
 		if (!GameInstance->IsTraining)
 			BattleState.TimeUntilRoundStart = BattleState.MaxTimeUntilRoundStart;
 		for (int i = 0; i < MaxBattleObjects; i++)
 			Objects[i]->ResetObject();
 
 		for (const auto Player : Players)
-			Player->RoundInit(true);
+			Player->RoundInit(false);
 
-		Players[0]->PlayerFlags = PLF_IsOnScreen;
-		Players[BattleState.TeamData[0].TeamCount]->PlayerFlags = PLF_IsOnScreen;
+		GetMainPlayer(true)->JumpToState(State_Universal_Stand);
+		GetMainPlayer(false)->JumpToState(State_Universal_Stand);
 
-		BattleState.MaxMeter[0] = Players[0]->MaxMeter;
-		BattleState.MaxMeter[1] = Players[BattleState.TeamData[0].TeamCount]->MaxMeter;
+		GetMainPlayer(true)->PlayerFlags = PLF_IsOnScreen;
+		GetMainPlayer(false)->PlayerFlags = PLF_IsOnScreen;
+
+		BattleState.MaxMeter[0] = GetMainPlayer(true)->MaxMeter;
+		BattleState.MaxMeter[1] = GetMainPlayer(false)->MaxMeter;
 
 		BattleState.RoundTimer = GameInstance->BattleData.StartRoundTimer * 60;
 		BattleState.bHUDVisible = true;
@@ -332,8 +329,12 @@ void ANightSkyGameState::MatchInit()
 	BattleState.RandomManager = GameInstance->BattleData.Random;
 	BattleState.TeamData[0].TeamCount = GameInstance->BattleData.PlayerListP1.Num();
 	BattleState.TeamData[1].TeamCount = GameInstance->BattleData.PlayerListP2.Num();
+	BattleState.GaugeP1.Empty();
+	BattleState.GaugeP2.Empty();
 	BattleState.GaugeP1.AddDefaulted(BattleState.MaxGauge.Num());
 	BattleState.GaugeP2.AddDefaulted(BattleState.MaxGauge.Num());
+	
+	CallBattleExtension(BattleExtension_MatchInit);
 
 	for (int i = 0; i < Players.Num(); i++)
 	{
@@ -1374,6 +1375,21 @@ void ANightSkyGameState::UpdateHUD()
 			BattleHudActor->TopWidget->P2ComboCounter = BattleState.MainPlayer[1]->ComboCounter;
 			BattleHudActor->TopWidget->Ping = NetworkStats.Ping;
 			BattleHudActor->TopWidget->RollbackFrames = NetworkStats.RollbackFrames;
+			
+			if (BattleHudActor->TopWidget->P1Gauge.IsEmpty())
+				BattleHudActor->TopWidget->P1Gauge.SetNum(
+					BattleState.MaxGauge.Num());
+			if (BattleHudActor->TopWidget->P2Gauge.IsEmpty())
+				BattleHudActor->TopWidget->P2Gauge.SetNum(
+					BattleState.MaxGauge.Num());
+			
+			for (int j = 0; j < BattleState.MaxGauge.Num(); j++)
+			{
+				BattleHudActor->TopWidget->P1Gauge[j] = static_cast<float>(BattleState.GaugeP1[j]) / BattleState.
+					MaxGauge[j];
+				BattleHudActor->TopWidget->P2Gauge[j] = static_cast<float>(BattleState.GaugeP2[j]) / BattleState.
+					MaxGauge[j];
+			}
 		}
 		if (BattleHudActor->BottomWidget != nullptr)
 		{
